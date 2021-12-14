@@ -1,3 +1,4 @@
+#include <_wctype.h>
 #include <iostream>
 #include <string>
 #include "Display.h"
@@ -13,85 +14,37 @@ struct AudioData
     Uint32 len;
 };
 
-struct SampleOsc
-{
-    // AudioData data;
-    Uint8 *bufEnd;
-    Uint8 *bufStart;
-    Uint8 *bufPos;
-    float pitch=1;
-    void loadWAV(const std::string &fileName)
-    {
-        // TODO: Handle streamFromFile
-        SDL_AudioSpec wavSpec;
-        Uint8 *wavStart;
-        Uint32 wavLength;
-
-        if (SDL_LoadWAV(fileName.c_str(), &wavSpec, &wavStart, &wavLength) == NULL)
-        {
-            // TODO: Proper error handling
-            std::cout << "Error: " << fileName
-                      << " could not be loaded as an audio file" << std::endl;
-            // throw fileName;
-        }
-
-        bufPos = wavStart;
-        bufStart = wavStart;
-        bufEnd = bufStart + wavLength; //byte offset
-    }
-    void generateSamples(float *stream, size_t len, size_t pos)
-    {
-        bufPos = bufStart + pos;
-
-        if (bufPos >= bufEnd || bufPos < bufStart)
-        {
-            // end
-            // return (size_t)-1;
-        }
-
-        Uint32 length = (Uint32)len;
-        Uint32 lengthLeft = (Uint32)((bufEnd - bufPos)/pitch);
-
-        // audio samples
-        Sint16 *samples = (Sint16 *)bufPos;
-        float sampleIndex = 0;
-        float factor = 1.0f / 32768.0f; // 1/(biggest number in a 16 bit unsigned int)
-        for (Uint32 i = 0; i < len; i++)
-        {
-            stream[i] = (samples[(size_t)sampleIndex]) * factor;
-            // if(playIndex>)
-            sampleIndex += pitch;
-        }
-
-        // audio->buf = audio->buf + length;
-        // audio->len = audio->len - length;
-    }
-};
+#include "SampleOsc.h"
 
 float *floatStream;
 int sLen;
 
+Uint8 *copybuf;
+Uint32 copylen;
+
+Uint32 accum = 0;
+Uint32 buffer_size = 64;
+int acc2 = buffer_size;
+
 void myAudioCallback(void *userData, Uint8 *streamIn, int streamInLen)
 {
-    // SampleOsc *osc = (SampleOsc *)userData;
+    //SampleOsc *osc = (SampleOsc *)userData;
     AudioData *audio = (AudioData *)userData;
+
 
     // std::cout << streamLen << std::endl;
     int streamLen = streamInLen / 2; // if len=10, it wants you to fill a buffer of ten 8-bit bytes, but “out” is an array of 16-bit ints
 
-    if (audio->len == 0)
+    acc2 = acc2 - streamLen;
+
+    float pitch = 1.4;
+    //std::cout << audio->len << " " << streamInLen << " " << acc2 << std::endl;
+    if(audio->len<streamInLen)
     {
-        return;
+        audio->buf = audio->buf-accum;
+        audio->len = audio->len+accum;
+        accum = 0;
     }
-
-    Uint32 length = (Uint32)streamInLen;
-
-    if (length > audio->len)
-    {
-        length = audio->len;
-    }
-
-    // memcpy(streamIn, audio->buf, length);
 
     floatStream = new float[streamLen]();
     sLen = streamLen; // copy for draw
@@ -103,14 +56,17 @@ void myAudioCallback(void *userData, Uint8 *streamIn, int streamInLen)
     for (Uint32 i = 0; i < streamLen; i++)
     {
         floatStream[i] = (samples[(size_t)sampleIndex]) * factor;
-        sampleIndex += 1;
+        sampleIndex += pitch;
         // std::cout << "float cpy " << floatStream[i] << std::endl;
     }
 
-    audio->buf = audio->buf + length;
-    audio->len = audio->len - length;
+    audio->buf = audio->buf + ((Uint32)(streamLen*pitch)*2);
+    audio->len = audio->len - ((Uint32)(streamLen*pitch)*2);
 
-    // final copy to callback
+    accum += (Uint32)((streamLen*pitch)*2);
+    //std::cout << streamLen << " " << audio->len << " " << accum << std::endl;
+
+    // final copy to callback //
     Sint16 *stream = (Sint16 *)streamIn;
     for (size_t i = 0; i < streamLen; i++)
     {
@@ -151,7 +107,7 @@ int main()
 
     //"res/AKWF_0014.wav"
 
-    if (SDL_LoadWAV("res/song.wav", &wavSpec, &wavBuf, &wavLength) == NULL)
+    if (SDL_LoadWAV("res/AKWF_0014.wav", &wavSpec, &wavBuf, &wavLength) == NULL)
     {
         // TODO: Proper error handling
         std::cout << "Error: "
@@ -160,12 +116,19 @@ int main()
         // throw fileName;
     }
 
-    SampleOsc oscillator;
-    oscillator.loadWAV("res/song.wav");
+    //SampleOsc oscillator;
+    //oscillator.loadWAV("res/song.wav");
 
     AudioData audio;
     audio.buf = wavBuf;
     audio.len = wavLength;
+
+    copybuf = new Uint8[wavLength]();
+    copylen = wavLength;
+    for(int i = 0; i < wavLength; i++)
+    {
+        copybuf[i] = wavBuf[i];
+    }
 
     // wavSpec.callback = myAudioCallback;
     // wavSpec.userdata = &audio;
@@ -186,9 +149,9 @@ int main()
     spec.freq = 44100;
     spec.format = AUDIO_S16SYS;
     spec.channels = 2;
-    spec.samples = 512;
+    spec.samples = buffer_size;
     spec.callback = myAudioCallback;
-    spec.userdata = &oscillator;
+    spec.userdata = &audio;
 
     int count = SDL_GetNumAudioDevices(0);
     for (int i = 0; i < count; ++i)
@@ -196,7 +159,7 @@ int main()
         printf("Audio device %d: %s\n", i, SDL_GetAudioDeviceName(i, 0));
     }
 
-    int deviceId = SDL_OpenAudioDevice(SDL_GetAudioDeviceName(1, 0), 0, &spec, NULL, 0);
+    int deviceId = SDL_OpenAudioDevice(SDL_GetAudioDeviceName(0, 0), 0, &spec, NULL, 0);
 
     if (deviceId == 0)
     {
@@ -215,6 +178,7 @@ int main()
     buffer[1] = 2;
     buffer[2] = 9;
     buffer = buffer + (Uint32)1;
+    buffer = buffer - (Uint32)1;
 
     for (int i = 0; i < len; i++)
     {
@@ -258,8 +222,6 @@ int main()
 
         SDL_RenderPresent(display.renderer);
     }
-
-    // SDL_PauseAudioDevice(deviceId, 1);
 
     SDL_FreeWAV(wavBuf);
 

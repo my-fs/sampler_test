@@ -1,5 +1,6 @@
 build:
 	g++ -std=c++17 \
+	-arch x86_64 \
 	-ggdb \
 	-I/usr/local/Homebrew/include \
 	-L/usr/local/Homebrew/lib \
