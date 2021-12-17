@@ -1,9 +1,11 @@
 #include <_wctype.h>
+#include <cstring>
 #include <iostream>
 #include <string>
 #include "Display.h"
 #include "SDL2/SDL.h"
 #include "SDL2/SDL_image.h"
+#include <math.h>
 
 int winWidth = 320;
 int winHeight = 240;
@@ -23,7 +25,7 @@ Uint8 *copybuf;
 Uint32 copylen;
 
 Uint32 accum = 0;
-Uint32 buffer_size = 64;
+Uint32 buffer_size = 32;
 int acc2 = buffer_size;
 
 void myAudioCallback(void *userData, Uint8 *streamIn, int streamInLen)
@@ -31,15 +33,14 @@ void myAudioCallback(void *userData, Uint8 *streamIn, int streamInLen)
     //SampleOsc *osc = (SampleOsc *)userData;
     AudioData *audio = (AudioData *)userData;
 
-
     // std::cout << streamLen << std::endl;
     int streamLen = streamInLen / 2; // if len=10, it wants you to fill a buffer of ten 8-bit bytes, but “out” is an array of 16-bit ints
 
     acc2 = acc2 - streamLen;
 
-    float pitch = 1.4;
+    float pitch = 2.1;
     //std::cout << audio->len << " " << streamInLen << " " << acc2 << std::endl;
-    if(audio->len<streamInLen)
+    if(audio->len<=streamInLen)
     {
         audio->buf = audio->buf-accum;
         audio->len = audio->len+accum;
@@ -55,7 +56,11 @@ void myAudioCallback(void *userData, Uint8 *streamIn, int streamInLen)
     float factor = 1.0f / 32768.0f; // 1/(biggest number in a 16 bit unsigned int)
     for (Uint32 i = 0; i < streamLen; i++)
     {
-        floatStream[i] = (samples[(size_t)sampleIndex]) * factor;
+        float leftSample = (samples[(unsigned int)floor(sampleIndex)]) * factor;
+        float rightSample = (samples[(unsigned int)ceil(sampleIndex)]) * factor;
+        float percentage = sampleIndex - floor(sampleIndex);
+        float interpolatedSample = ( (1.0 - percentage) * leftSample) + (percentage * rightSample);
+        floatStream[i] = interpolatedSample;
         sampleIndex += pitch;
         // std::cout << "float cpy " << floatStream[i] << std::endl;
     }
@@ -68,7 +73,7 @@ void myAudioCallback(void *userData, Uint8 *streamIn, int streamInLen)
 
     // final copy to callback //
     Sint16 *stream = (Sint16 *)streamIn;
-    for (size_t i = 0; i < streamLen; i++)
+    for (size_t i = 0; i < streamInLen/sizeof(Sint16); i++)
     {
         float val = floatStream[i];
 
@@ -80,8 +85,6 @@ void myAudioCallback(void *userData, Uint8 *streamIn, int streamInLen)
         {
             val = -1.0f;
         }
-
-        // std::cout << val << std::endl;
 
         stream[i] = (Sint16)(val * 32767); // out stream casted to 16bit integers
     }
@@ -107,7 +110,7 @@ int main()
 
     //"res/AKWF_0014.wav"
 
-    if (SDL_LoadWAV("res/AKWF_0014.wav", &wavSpec, &wavBuf, &wavLength) == NULL)
+    if (SDL_LoadWAV("res/song.wav", &wavSpec, &wavBuf, &wavLength) == NULL)
     {
         // TODO: Proper error handling
         std::cout << "Error: "
@@ -177,8 +180,8 @@ int main()
     buffer[0] = 5;
     buffer[1] = 2;
     buffer[2] = 9;
-    buffer = buffer + (Uint32)1;
     buffer = buffer - (Uint32)1;
+    //buffer = buffer + (Uint32)1;
 
     for (int i = 0; i < len; i++)
     {
@@ -210,7 +213,8 @@ int main()
         {
             float l = floatStream[i];
             float r = floatStream[i + 1];
-            int s = i / (winWidth / 100);
+            int s = i*2;
+
             SDL_SetRenderDrawColor(display.renderer, 255, 0, 255, 255);
             SDL_RenderDrawPoint(display.renderer, s, (l * 60) + 50);
 
