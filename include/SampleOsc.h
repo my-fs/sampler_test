@@ -7,9 +7,12 @@ struct SampleOsc
     Uint8 *bufPos;
     Uint32 length; // len (in bytes)
     float pitch=1.85;
+    float amplitude = 0;
     float *table;
     float phase=0;
     bool phaseReset = false;
+    int note = 0;
+    float* stream;
     void loadWAV(const std::string &fileName)
     {
         // TODO: Handle streamFromFile
@@ -32,6 +35,9 @@ struct SampleOsc
         // load float array of samples (mono)
         table = new float[length/2]();
         Sint16* samples = (Sint16*)wavStart;
+
+        stream = new float[buffer_size*2]();
+
         float factor = 1.0f/32768.0f; // converting between S16bit->float, (1/highest signed 16 bit number)
         for(Uint32 i = 0; i < length/2; i++)
         {
@@ -53,15 +59,16 @@ struct SampleOsc
         float percentage = phase - floor(phase);
         float interpolatedSample = ((1.0 - percentage) * left_step) + (percentage * right_step);
 
-        float samp = interpolatedSample * amp;
+        float samp = interpolatedSample * amplitude;
         
         return samp;
     }
-    void generateSamples(float *stream, size_t len)
+    void generateSamples(size_t len)
     {
         for(int i = 0; i < len; i++)
         {
             float samp = getNextSample();
+            //std::cout << samp << std::endl;
             stream[i*2] = samp;
             stream[i*2+1] = samp;
         }
