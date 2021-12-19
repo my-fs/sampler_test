@@ -22,7 +22,7 @@ struct AudioData
 bool DSPisOn;
 
 unsigned int bpm = 120;
-unsigned int buffer_size = 64;
+unsigned int buffer_size = 512;
 unsigned int sample_rate = 44100;
 
 float phase = 0.0;
@@ -89,7 +89,7 @@ void myAudioCallback(void *udata, Uint8 *stream, int len)
 //void myAudioCallback(void *udata, Uint8 *stream, int len)
 //{
 //    SampleOsc *osc = (SampleOsc *)udata;
-//    //PolySynth 
+//    //PolySynth
 //    //AudioData *audio = (AudioData *)udata;
 //    //std::cout <<  len / sizeof(Sint16) / 2 << std::endl;
 //    // final copy
@@ -166,7 +166,7 @@ int main()
         printf("Audio device %d: %s\n", i, SDL_GetAudioDeviceName(i, 0));
     }
 
-    int deviceId = SDL_OpenAudioDevice(SDL_GetAudioDeviceName(0, 0), 0, &spec, NULL, 0);
+    int deviceId = SDL_OpenAudioDevice(SDL_GetAudioDeviceName(1, 0), 0, &spec, NULL, 0);
 
     if (deviceId == 0)
     {
@@ -192,11 +192,9 @@ int main()
     mspt = getSecondsPerTick(bpm, mfw.tpq);
     std::cout << "mspt" << mspt << std::endl;
 
-
-    smf::MidiEvent event = mfw.midifile[0][0];
+    //smf::MidiEvent event = mfw.midifile[0][0];
 
     polysynth.init();
-
     bool isRunning = true;
     while (isRunning)
     {
@@ -242,31 +240,32 @@ int main()
                 std::cout << "pitch " << polysynth.voices[i].pitch;
             }
             std::cout << std::endl;
+            for(const auto& elem : polysynth.voiceNotePairs)
+            {
+                std::cout << "pairs " << elem.first << " " << elem.second;
+            }
+            std::cout << "\n";
         }
 
-        for(const auto& elem : polysynth.voiceNotePairs)
-        {
-            std::cout << "pairs " << elem.first << " " << elem.second << "\n";
-        }
 
-       // int nBytes = message.size();
-       // if (nBytes > 0)
-       // {
-       //     for (int i = 0; i < nBytes; i++)
-       //     {
-       //         std::cout << "Byte " << i << " = " << (int)message[i] << ", ";
-       //     }
-       //     std::cout << "freq " << midi2Freq((int)message[1]) << std::endl;
-       //     // std::cout << "stamp = " << stamp << std::endl;
-       //     if((int)message[0]==144) {
-       //         amp = 0.8;
-       //         oscillator.phaseReset=true;
-       //         frequency = midi2Freq((int)message[1]);
-       //     }
-       //     if((int)message[0]==128) {
-       //         amp = 0.0;
-       //     }
-       // }
+        // int nBytes = message.size();
+        // if (nBytes > 0)
+        // {
+        //     for (int i = 0; i < nBytes; i++)
+        //     {
+        //         std::cout << "Byte " << i << " = " << (int)message[i] << ", ";
+        //     }
+        //     std::cout << "freq " << midi2Freq((int)message[1]) << std::endl;
+        //     // std::cout << "stamp = " << stamp << std::endl;
+        //     if((int)message[0]==144) {
+        //         amp = 0.8;
+        //         oscillator.phaseReset=true;
+        //         frequency = midi2Freq((int)message[1]);
+        //     }
+        //     if((int)message[0]==128) {
+        //         amp = 0.0;
+        //     }
+        // }
 
         for(int i = 0; i < buffer_size; i++)
         {

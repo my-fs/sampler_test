@@ -16,6 +16,7 @@ struct MidiFileWrapper
     // load midi wrapped midifile object
     void init(std::string p_filename)
     {
+
         filename = p_filename;
 
         // i feel like this whole exchange is silly

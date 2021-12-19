@@ -2,9 +2,9 @@
 
 struct SampleOsc
 {
-    Uint8 *bufEnd;
-    Uint8 *bufStart;
-    Uint8 *bufPos;
+    //Uint8 *bufEnd;
+    //Uint8 *bufStart;
+    //Uint8 *bufPos;
     Uint32 length; // len (in bytes)
     float pitch=1.85;
     float amplitude = 0;
@@ -27,9 +27,9 @@ struct SampleOsc
                       << " could not be loaded as an audio file" << std::endl;
         }
 
-        bufPos = wavStart;
-        bufStart = wavStart;
-        bufEnd = bufStart + wavLength; //byte offset
+        //bufPos = wavStart;
+        //bufStart = wavStart;
+        //bufEnd = bufStart + wavLength; //byte offset
         length = wavLength;
         
         // load float array of samples (mono)

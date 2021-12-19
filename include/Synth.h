@@ -22,7 +22,7 @@ struct PolySynth
         for(int i = 0; i < voiceCount; i++)
         {
             SampleOsc osc;
-            osc.loadWAV("res/AKWF_birds_0003.wav");
+            osc.loadWAV("res/AKWF_aguitar_0001.wav");
             voices.push_back(osc);
         }
     }
@@ -48,28 +48,38 @@ struct PolySynth
                 if(currentVoiceSize<voiceCount)
                 {
                     midiNotesOn.push_back(midiMessage);
-                    currentVoiceSize++;
-                    voices[currentVoiceSize-1].phaseReset=true;
+                    //currentVoiceSize++;
+                    voices[midiNotesOn.size()-1].phaseReset=true;
                     std::cout << "?reset??" << std::endl;
-                    voices[currentVoiceSize-1].amplitude = 0.1;
-                    voices[currentVoiceSize-1].note = (int)midiMessage[1];
-                    voices[currentVoiceSize-1].pitch = midi2Freq((int)midiMessage[1]);
-                    //voiceNotePairs.insert({currentVoiceSize,(int)midiMessage[1]});
+                    voices[midiNotesOn.size()-1].amplitude = 0.2;
+                    voices[midiNotesOn.size()-1].note = (int)midiMessage[1];
+                    voices[midiNotesOn.size()-1].pitch = midi2Freq((int)midiMessage[1]);
+                    voiceNotePairs.insert({currentVoiceSize,(int)midiMessage[1]});
                 }
             }
 
             if((int)midiMessage[0]==128) // note off
             {
-                //amp = 0.0;
+               // for(auto const& note : midiNotesOn)
+               // {
+               //     if((int)note[1]==(int)midiMessage[1])
+               //     {
+               //         note.erase();
+               //         
+               //     }
+               // }
                 for(int i = 0; i < midiNotesOn.size(); i++)
                 {
                     if((int)midiNotesOn[i][1]==(int)midiMessage[1])
                     {
                         std::cout << "erased! " << i << std::endl;
-                        //voiceNotePairs.erase(currentVoiceSize);
                         midiNotesOn.erase(midiNotesOn.begin() + i); 
-                        voices[currentVoiceSize-1].amplitude = 0.0;
-                        currentVoiceSize--;
+                        voices[midiNotesOn.size()-1].amplitude = 0.0;
+                        voices[midiNotesOn.size()-1].note = -1;
+                        voices[midiNotesOn.size()-1].pitch = 0;
+                        //currentVoiceSize--; 
+                        voiceNotePairs.erase(currentVoiceSize);
+                        //voiceNotePairs[currentVoiceSize];
                     }
                 }
             }
@@ -85,16 +95,16 @@ struct PolySynth
             {
                 if((int)midiNotesOn[i][1]==voices[j].note)
                 {
-                   // voices[j].pitch = midi2Freq((int)midiNotesOn[i][1]);
                     voices[j].generateSamples(len);
                 }
             }
         }
-        for(int i = 0; i < currentVoiceSize; i++)
+        for(int i = 0; i < midiNotesOn.size(); i++)
         {
             for(int j = 0; j < len; j++)
             {
                //std::cout << samp << std::endl
+                //if()
                 mixedStream[j*2] += voices[i].stream[j*2];
                 mixedStream[j*2+1] += voices[i].stream[j*2+1];
             }
